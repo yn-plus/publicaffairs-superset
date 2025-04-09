@@ -57,12 +57,10 @@ function listInstances() {
 
 function deploy() {
   echo "\n=> Deploying to $instance_name instances"
+  echo "instances: $instances"
   total=${#instances[@]}
   i=1
 
-  # clonar el repo
-  # elegir la rama
-  # compose up --build
   for instance in "${instances[@]}"; do
     echo "Deploying to: $instance - ($i/$total)";
     COMMAND_ID=$(aws ssm send-command \
@@ -123,6 +121,5 @@ function deploy() {
 #     ;;
 # esac
 
-echo "=> Deploying $docker_image to $instance_name instances"
 listInstances
 deploy
