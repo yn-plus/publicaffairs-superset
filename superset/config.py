@@ -310,7 +310,7 @@ AUTH_RATE_LIMIT = "5 per second"
 APP_NAME = "Superset"
 
 # Specify the App icon
-APP_ICON = "/static/assets/images/superset-logo-horiz.png"
+APP_ICON = "/static/assets/images/superset.png"
 
 # Specify where clicking the logo would take the user'
 # Default value of None will take you to '/superset/welcome'
@@ -1570,6 +1570,12 @@ TALISMAN_CONFIG = {
             "https://apachesuperset.gateway.scarf.sh",
             "https://static.scarf.sh/",
             # "https://avatars.slack-edge.com", # Uncomment when SLACK_ENABLE_AVATARS is True
+            "https://publicaffairs-staging.yn-es.com:8088/",
+            "https://publicaffairs.yn-es.com:8088/",
+            "https://publicaffairs-staging.yn-es.com/",
+            "https://publicaffairs.yn-es.com/",
+            # "https://cdn.brandfolder.io", # Uncomment when SLACK_ENABLE_AVATARS is True  # noqa: E501
+            "ows.terrestris.de",
         ],
         "worker-src": ["'self'", "blob:"],
         "connect-src": [
@@ -1600,6 +1606,12 @@ TALISMAN_DEV_CONFIG = {
             "https://apachesuperset.gateway.scarf.sh",
             "https://static.scarf.sh/",
             "https://avatars.slack-edge.com",
+            "https://publicaffairs-staging.yn-es.com:8088/",
+            "https://publicaffairs.yn-es.com:8088/",
+            "https://publicaffairs-staging.yn-es.com/",
+            "https://publicaffairs.yn-es.com/",
+            "https://cdn.brandfolder.io",
+            "ows.terrestris.de",
         ],
         "worker-src": ["'self'", "blob:"],
         "connect-src": [

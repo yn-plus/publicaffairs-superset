@@ -1,0 +1,11 @@
+name: Deploy Superset Production
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-base.yml
+    with:
+      environment: prod
+    secrets: inherit
