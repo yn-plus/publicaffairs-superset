@@ -75,9 +75,9 @@ function deploy() {
       'sudo -u ubuntu git clone -b $repo_branch --depth 1 $repo',
       'cd /home/ubuntu/publicaffairs-superset',
       'sudo -u ubuntu \
-        DATABASE_PASSWORD=$DATABASE_PASSWORD \
-        POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
-        SUPERSET_SECRET_KEY=$SUPERSET_SECRET_KEY \
+        DATABASE_PASSWORD=\"$DATABASE_PASSWORD\" \
+        POSTGRES_PASSWORD=\"$POSTGRES_PASSWORD\" \
+        SUPERSET_SECRET_KEY=\"$SUPERSET_SECRET_KEY\" \
         docker compose -f docker-compose-non-dev.yml up --build',
     ]" \
     --query 'Command.CommandId' --output text)
