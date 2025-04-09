@@ -5,7 +5,7 @@ set -o pipefail
 aws_region=eu-west-1
 env_name=$1
 
-instance_name="Publicaffairs $env_name"
+instance_name="PublicAffairs $env_name"
 container_name=superset-$env_name
 # container_port=8088
 superset_secret_id=publicaffairs-superset-$env_name
@@ -57,7 +57,6 @@ function listInstances() {
 
 function deploy() {
   echo "\n=> Deploying to $instance_name instances"
-  echo "instances: $instances"
   total=${#instances[@]}
   i=1
 
