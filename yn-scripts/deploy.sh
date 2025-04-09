@@ -67,14 +67,13 @@ function deploy() {
     --targets "Key=instanceIds,Values=$instance" \
     --region "$aws_region" \
     --parameters "commands=[
-      'cd /home/ubuntu',
-      'sudo -u ubuntu cd publicaffairs-superset || true',
+      'cd /home/ubuntu/publicaffairs-superset || true',
       'sudo -u ubuntu docker compose -f docker-compose-non-dev.yml down || true',
+      'cd /home/ubuntu',
       'sudo -u ubuntu docker system prune -a -f',
-      'sudo -u ubuntu docker rm -rf publicaffairs-superset',
-      'sudo -u ubuntu git clone $repo',
-      'sudo -u ubuntu cd publicaffairs-superset',
-      'sudo -u ubuntu git checkout $repo_branch',
+      'sudo -u ubuntu rm -rf publicaffairs-superset',
+      'sudo -u ubuntu git clone -b $repo_branch --depth 1 $repo',
+      'cd /home/ubuntu/publicaffairs-superset',
       'sudo -u ubuntu \
         DATABASE_PASSWORD=$DATABASE_PASSWORD \
         POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
