@@ -9,3 +9,6 @@ jobs:
     with:
       environment: prod
     secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
