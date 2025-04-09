@@ -1,0 +1,57 @@
+name: Deploy Base
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+
+env:
+  AWS_REGION: eu-west-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          ref: publicaffairs-4-1-1
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      # - name: Add SSH key
+      #   uses: webfactory/ssh-agent@v0.9.0
+      #   with:
+      #     ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      # - name: Setup pnpm
+      #   uses: pnpm/action-setup@v4
+
+      # - name: Setup node.js
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version-file: '.nvmrc'
+      #     cache: 'pnpm'
+
+      # - name: 'Build extension: yn-publicaffairs'
+      #   run: |
+      #     pnpm install --frozen-lockfile
+      #     pnpm run build
+
+      # scrpt to run docker compose with aws ssm
+      # - name: Deploy to EC2
+      #   run: |
+      #     ./scripts/deploy-application.sh ${{ env.AWS_REGION }} ${{ inputs.environment }}
+
+      - name: Deploy to EC2
+        run:
+          ./yn-scripts/deploy.sh ${{ inputs.environment }}
+        # env:
+        #   SMTP_USER: ${{ vars.SMTP_USER }}
+        #   SMTP_PASS: ${{ secrets.SMTP_PASS }}
