@@ -1,0 +1,12 @@
+services:
+  db:
+    env_file: docker-compose.env
+  superset:
+    env_file: docker-compose.env
+  superset-init:
+    env_file: docker-compose.env
+  superset-worker:
+    env_file: docker-compose.env
+  superset-worker-beat:
+    env_file: docker-compose.env
+

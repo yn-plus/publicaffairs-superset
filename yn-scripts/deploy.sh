@@ -54,6 +54,12 @@ function listInstances() {
   done
 }
 
+function formatEnvVars() {
+  sed -e "s/\${DATABASE_PASSWORD}/${DATABASE_PASSWORD}/" \
+      -e "s/\${POSTGRES_PASSWORD}/${POSTGRES_PASSWORD}/" \
+      -e "s/\${SUPERSET_SECRET_KEY}/${SUPERSET_SECRET_KEY}/" \
+      docker-compose.env-template > docker-compose.env
+}
 
 function deploy() {
   echo "\n=> Deploying to $instance_name instances"
@@ -74,15 +80,7 @@ function deploy() {
       'rm -rf /home/ubuntu/superset',
       'sudo -u ubuntu git clone -b $repo_branch --depth 1 $repo superset',
       'cd /home/ubuntu/superset',
-      'sudo -u ubuntu docker compose -f docker-compose-non-dev.yml up --build -d \
-        -e DATABASE_PASSWORD=\"$DATABASE_PASSWORD\" \
-        -e POSTGRES_PASSWORD=\"$POSTGRES_PASSWORD\" \
-        -e SUPERSET_SECRET_KEY=\"$SUPERSET_SECRET_KEY\" \
-        -e SERVER_WORKER_AMOUNT=4 \
-        -e DEV_MODE=false \
-        -e FLASK_DEBUG=false \
-        -e SUPERSET_ENV=production \
-        -e SUPERSET_LOAD_EXAMPLES=no',
+      'sudo -u ubuntu docker compose -f docker-compose-non-dev.yml up --build -d',
       'sudo -u ubuntu docker network connect publicaffairs-network superset_app || true',
       'sudo -u ubuntu docker restart caddy',
     ]" \
@@ -111,20 +109,8 @@ function deploy() {
   done
 }
 
-
-
-# case $env_name in
-#   prod)
-#     web_url='https://ynsights-hub.com'
-#     ;;
-#   staging)
-#     web_url='https://staging.ynsights-hub.com'
-#     ;;
-#   *)
-#     echo "Invalid environment name: $env_name. Must be 'production' or 'staging'"
-#     exit 1
-#     ;;
-# esac
+# main
 
 listInstances
+formatEnvVars
 deploy
