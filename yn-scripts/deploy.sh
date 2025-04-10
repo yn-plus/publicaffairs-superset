@@ -63,6 +63,9 @@ function formatEnvVars() {
 
 function deploy() {
   echo "\n=> Deploying to $instance_name instances"
+  # Converted to base64 so that single and double quotes are not a problem when printing the content of the variable on its corresponding command
+  ENV_VARS_B64=$(base64 -w 0 docker-compose.env)
+
   total=${#instances[@]}
   i=1
 
@@ -80,6 +83,7 @@ function deploy() {
       'rm -rf /home/ubuntu/superset',
       'sudo -u ubuntu git clone -b $repo_branch --depth 1 $repo superset',
       'cd /home/ubuntu/superset',
+      'echo \"$ENV_VARS_B64\" | base64 --decode > docker-compose.env',
       'sudo -u ubuntu docker compose -f docker-compose-non-dev.yml up --build -d',
       'sudo -u ubuntu docker network connect publicaffairs-network superset_app || true',
       'sudo -u ubuntu docker restart caddy',
