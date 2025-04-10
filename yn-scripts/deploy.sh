@@ -67,7 +67,7 @@ function deploy() {
     --targets "Key=instanceIds,Values=$instance" \
     --region "$aws_region" \
     --parameters "commands=[
-      'cd /home/ubuntu/superset || true', # stop previous deployment
+      'cd /home/ubuntu/superset || true',
       'sudo -u ubuntu docker compose -f docker-compose-non-dev.yml down || true',
       'cd /home/ubuntu',
       'sudo -u ubuntu docker system prune -a -f',
@@ -84,6 +84,8 @@ function deploy() {
         SUPERSET_ENV=production \
         SUPERSET_LOAD_EXAMPLES=no \
         docker compose -f docker-compose-non-dev.yml up --build',
+      'sudo -u ubuntu docker network connect publicaffairs-network superset_app || true',
+      'sudo -u ubuntu docker restart caddy',
     ]" \
     --query 'Command.CommandId' --output text)
     echo "SSM command is running with ID: $COMMAND_ID"
