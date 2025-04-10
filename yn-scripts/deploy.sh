@@ -90,7 +90,9 @@ function deploy() {
       'sudo -u ubuntu docker restart caddy',
     ]" \
     --query 'Command.CommandId' --output text \
-    --cloud-watch-output-config "CloudWatchOutputEnabled=true,CloudWatchLogGroupName=publicaffairs-superset-deploy-$env_name")
+    --cloud-watch-output-config "CloudWatchOutputEnabled=true,CloudWatchLogGroupName=publicaffairs-superset-deploy-$env_name" \
+    --no-cli-pager \
+    )
     echo "SSM command is running with ID: $COMMAND_ID"
 
     # wait until command is finished
