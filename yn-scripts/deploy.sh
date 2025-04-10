@@ -72,8 +72,8 @@ function deploy() {
       'cd /home/ubuntu',
       'sudo -u ubuntu docker system prune -a -f',
       'sudo -u ubuntu rm -rf publicaffairs-superset',
-      'sudo -u ubuntu git clone -b $repo_branch --depth 1 $repo',
-      'cd /home/ubuntu/publicaffairs-superset',
+      'sudo -u ubuntu git clone -b $repo_branch --depth 1 $repo superset',
+      'cd /home/ubuntu/superset',
       'sudo -u ubuntu \
         DATABASE_PASSWORD=\"$DATABASE_PASSWORD\" \
         POSTGRES_PASSWORD=\"$POSTGRES_PASSWORD\" \
