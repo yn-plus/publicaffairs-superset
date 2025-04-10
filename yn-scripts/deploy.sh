@@ -84,7 +84,7 @@ function deploy() {
       'sudo -u ubuntu git clone -b $repo_branch --depth 1 $repo superset',
       'cd /home/ubuntu/superset',
       'echo \"$ENV_VARS_B64\" | base64 --decode > docker-compose.env',
-      'sudo -u ubuntu docker compose -f docker-compose-non-dev.yml up --build -d',
+      'sudo -u ubuntu docker compose -f docker-compose-non-dev.yml -f docker-compose-non-dev.override.yml up --build -d',
       'sudo -u ubuntu docker network connect publicaffairs-network superset_app || true',
       'sudo -u ubuntu docker restart caddy',
     ]" \
