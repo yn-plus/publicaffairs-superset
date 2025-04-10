@@ -74,20 +74,20 @@ function deploy() {
       'rm -rf /home/ubuntu/superset',
       'sudo -u ubuntu git clone -b $repo_branch --depth 1 $repo superset',
       'cd /home/ubuntu/superset',
-      'sudo -u ubuntu \
-        DATABASE_PASSWORD=\"$DATABASE_PASSWORD\" \
-        POSTGRES_PASSWORD=\"$POSTGRES_PASSWORD\" \
-        SUPERSET_SECRET_KEY=\"$SUPERSET_SECRET_KEY\" \
-        SERVER_WORKER_AMOUNT=4 \
-        DEV_MODE=false \
-        FLASK_DEBUG=false \
-        SUPERSET_ENV=production \
-        SUPERSET_LOAD_EXAMPLES=no \
-        docker compose -f docker-compose-non-dev.yml up --build -d',
+      'sudo -u ubuntu docker compose -f docker-compose-non-dev.yml up --build -d \
+        -e DATABASE_PASSWORD=\"$DATABASE_PASSWORD\" \
+        -e POSTGRES_PASSWORD=\"$POSTGRES_PASSWORD\" \
+        -e SUPERSET_SECRET_KEY=\"$SUPERSET_SECRET_KEY\" \
+        -e SERVER_WORKER_AMOUNT=4 \
+        -e DEV_MODE=false \
+        -e FLASK_DEBUG=false \
+        -e SUPERSET_ENV=production \
+        -e SUPERSET_LOAD_EXAMPLES=no',
       'sudo -u ubuntu docker network connect publicaffairs-network superset_app || true',
       'sudo -u ubuntu docker restart caddy',
     ]" \
-    --query 'Command.CommandId' --output text)
+    --query 'Command.CommandId' --output text \
+    --cloud-watch-output-config "CloudWatchOutputEnabled=true,CloudWatchLogGroupName=publicaffairs-superset-deploy-$env_name")
     echo "SSM command is running with ID: $COMMAND_ID"
 
     # wait until command is finished
