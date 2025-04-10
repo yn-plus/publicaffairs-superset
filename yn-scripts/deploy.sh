@@ -70,7 +70,7 @@ function deploy() {
       'cd /home/ubuntu/superset || true',
       'sudo -u ubuntu docker compose -f docker-compose-non-dev.yml down || true',
       'cd /home/ubuntu',
-      'sudo -u ubuntu docker system prune -a -f',
+      'sudo -u ubuntu docker image prune --filter \"until=48h\" -f',
       'rm -rf /home/ubuntu/superset',
       'sudo -u ubuntu git clone -b $repo_branch --depth 1 $repo superset',
       'cd /home/ubuntu/superset',
