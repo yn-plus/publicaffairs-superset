@@ -58,7 +58,7 @@ function formatEnvVars() {
   sed -e "s/\${DATABASE_PASSWORD}/${DATABASE_PASSWORD}/" \
       -e "s/\${POSTGRES_PASSWORD}/${POSTGRES_PASSWORD}/" \
       -e "s/\${SUPERSET_SECRET_KEY}/${SUPERSET_SECRET_KEY}/" \
-      docker-compose.env-template > docker-compose.env
+      yn-scripts/docker-compose.env-template > docker-compose.env
 }
 
 function deploy() {
@@ -85,7 +85,7 @@ function deploy() {
       'cd /home/ubuntu/superset',
       'sudo -u ubuntu cp yn-scripts/superset_config.py docker/superset_config.py',
       'echo \"$ENV_VARS_B64\" | base64 --decode > docker-compose.env',
-      'sudo -u ubuntu docker compose -f docker-compose-non-dev.yml -f docker-compose-non-dev.override.yml up --build -d',
+      'sudo -u ubuntu docker compose -f docker-compose-non-dev.yml -f yn-scripts/docker-compose-non-dev.override.yml up --build -d',
       'sudo -u ubuntu docker network connect publicaffairs-network superset_app || true',
       'sudo -u ubuntu docker restart caddy',
     ]" \
