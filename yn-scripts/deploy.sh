@@ -83,7 +83,7 @@ function deploy() {
         FLASK_DEBUG=false \
         SUPERSET_ENV=production \
         SUPERSET_LOAD_EXAMPLES=no \
-        docker compose -f docker-compose-non-dev.yml up --build',
+        docker compose -f docker-compose-non-dev.yml up --build -d',
       'sudo -u ubuntu docker network connect publicaffairs-network superset_app || true',
       'sudo -u ubuntu docker restart caddy',
     ]" \
