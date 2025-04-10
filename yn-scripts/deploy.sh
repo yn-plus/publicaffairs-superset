@@ -78,6 +78,12 @@ function deploy() {
         DATABASE_PASSWORD=\"$DATABASE_PASSWORD\" \
         POSTGRES_PASSWORD=\"$POSTGRES_PASSWORD\" \
         SUPERSET_SECRET_KEY=\"$SUPERSET_SECRET_KEY\" \
+        SERVER_WORKER_AMOUNT=4 \
+        DEV_MODE=false \
+        FLASK_DEBUG=false \
+        SUPERSET_ENV=production \
+        SUPERSET_LOAD_EXAMPLES=no \
+        SUPERSET_CONFIG_PATH=/app/docker/superset_config.py \
         docker compose -f docker-compose-non-dev.yml up --build',
     ]" \
     --query 'Command.CommandId' --output text)
