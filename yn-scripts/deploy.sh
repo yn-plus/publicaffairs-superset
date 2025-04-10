@@ -67,11 +67,11 @@ function deploy() {
     --targets "Key=instanceIds,Values=$instance" \
     --region "$aws_region" \
     --parameters "commands=[
-      'cd /home/ubuntu/superset || true',
+      'cd /home/ubuntu/superset || true', # stop previous deployment
       'sudo -u ubuntu docker compose -f docker-compose-non-dev.yml down || true',
       'cd /home/ubuntu',
       'sudo -u ubuntu docker system prune -a -f',
-      'sudo -u ubuntu rm -rf superset',
+      'rm -rf /home/ubuntu/superset',
       'sudo -u ubuntu git clone -b $repo_branch --depth 1 $repo superset',
       'cd /home/ubuntu/superset',
       'sudo -u ubuntu \
@@ -83,7 +83,6 @@ function deploy() {
         FLASK_DEBUG=false \
         SUPERSET_ENV=production \
         SUPERSET_LOAD_EXAMPLES=no \
-        SUPERSET_CONFIG_PATH=/app/docker/superset_config.py \
         docker compose -f docker-compose-non-dev.yml up --build',
     ]" \
     --query 'Command.CommandId' --output text)
