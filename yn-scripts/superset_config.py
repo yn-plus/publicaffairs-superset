@@ -17,6 +17,8 @@
 
 # this is loaded by superset/config.py
 
+APP_ICON = "/static/assets/images/burson-yn-logo.png"
+
 TALISMAN_CONFIG = {
     "content_security_policy": {
         "base-uri": ["'self'"],
