@@ -90,3 +90,9 @@ TALISMAN_DEV_CONFIG = {
     "force_https": False,
     "session_cookie_secure": False,
 }
+
+# Custom color schemes for charts
+EXTRA_CATEGORICAL_COLOR_SCHEMES = [
+    {"id": "publicaffairs_charts", "label": "Public Affairs gráficos", "colors": ["#0B0400", "#FF5667", "#FFBFC3", "#746CFF", "#ABA7FF", "#5C5751", "#E3E2D6"]},
+    {"id": "publicaffairs_evolution", "label": "Public Affairs evolución", "colors": ["#FF5667", "#FFBFC3"]},
+]
