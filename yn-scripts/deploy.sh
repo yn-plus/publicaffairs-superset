@@ -85,6 +85,7 @@ function deploy() {
       'cd /home/ubuntu/superset',
       'sudo -u ubuntu cp yn-scripts/superset_config.py docker/superset_config.py',
       'echo \"$ENV_VARS_B64\" | base64 --decode > docker-compose.env',
+      'sudo -u ubuntu docker builder prune',
       'sudo -u ubuntu docker compose -f docker-compose-non-dev.yml -f yn-scripts/docker-compose-non-dev.override.yml up --build -d',
       'sudo -u ubuntu docker network connect publicaffairs-network superset_app || true',
       'sudo -u ubuntu docker restart caddy',
