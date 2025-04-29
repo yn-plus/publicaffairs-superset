@@ -97,3 +97,14 @@ EXTRA_CATEGORICAL_COLOR_SCHEMES = [
     {"id": "publicaffairs_evolution", "label": "Public Affairs evolución", "colors": ["#FF5667", "#FFBFC3"]},
     {"id": "burson_v2", "label": "Burson v2", "colors": ["#FFFF3F", "#FFFFCF", "#ABA7FF", "#746CFF", "#0B0400", "#ACA9A1", "#F2F2E5"]},
 ]
+
+# Custom color for text in legend charts
+THEME_OVERRIDES = {
+    "echarts": {
+        "legend": {
+            "textStyle": {
+                "color": "#FFFFFF"
+            }
+        }
+    }
+}
