@@ -95,5 +95,5 @@ TALISMAN_DEV_CONFIG = {
 EXTRA_CATEGORICAL_COLOR_SCHEMES = [
     {"id": "publicaffairs_charts", "label": "Public Affairs gráficos", "colors": ["#0B0400", "#FF5667", "#FFBFC3", "#746CFF", "#ABA7FF", "#5C5751", "#E3E2D6"]},
     {"id": "publicaffairs_evolution", "label": "Public Affairs evolución", "colors": ["#FF5667", "#FFBFC3"]},
-    {"id": "burson_v2", "label": "Burson v2", "colors": ["#FFFF3F", "#FFFFCF", "#ABA7FF", "#746CFF", "#0B0400", "#5C5751", "#ACA9A1"]},
+    {"id": "burson_v2", "label": "Burson v2", "colors": ["#FFFF3F", "#FFFFCF", "#ABA7FF", "#746CFF", "#0B0400", "#ACA9A1", "#F2F2E5"]},
 ]
