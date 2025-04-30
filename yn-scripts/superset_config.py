@@ -42,6 +42,7 @@ TALISMAN_CONFIG = {
             "'self'",
             "https://api.mapbox.com",
             "https://events.mapbox.com",
+            "https://publicaffairs.yn-es.com"
         ],
         "object-src": "'none'",
         "style-src": [
