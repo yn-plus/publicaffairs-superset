@@ -104,11 +104,12 @@ services:
     user: "root"
     volumes: *superset-volumes
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME",
-        ]
+      # test:
+      #   [
+      #     "CMD-SHELL",
+      #     "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME",
+      #   ]
+      test: ["CMD-SHELL", "pgrep -f 'celery.*worker' || exit 1"]
 
   superset-worker-beat:
     build:
