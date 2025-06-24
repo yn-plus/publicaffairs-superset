@@ -181,8 +181,11 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      # test: ["CMD-SHELL", "celery inspect ping -A superset.tasks.celery_app:app -d celery@$$HOSTNAME"]
-      test: ["CMD-SHELL", "pgrep -f 'celery.*worker' || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME",
+        ]
     # Bump memory limit if processing selenium / thumbnails on superset-worker
     # mem_limit: 2038m
     # mem_reservation: 128M
