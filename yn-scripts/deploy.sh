@@ -447,8 +447,9 @@ mv "\$staged_release_directory" "\$release_directory"
 
 capture_image_ids old_image_ids
 old_image_ids_captured=true
-compose_for_release "\$release_directory" build \
-  superset superset-init superset-worker superset-worker-beat
+for service in superset superset-init superset-worker superset-worker-beat; do
+  compose_for_release "\$release_directory" build "\$service"
+done
 capture_image_ids candidate_image_ids
 candidate_image_ids_captured=true
 
