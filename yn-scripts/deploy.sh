@@ -125,7 +125,7 @@ ARTIFACT_BUCKET='${ARTIFACT_BUCKET}'
 ARTIFACT_KEY='${ARTIFACT_KEY}'
 ARTIFACT_SHA256='${ARTIFACT_SHA256}'
 SUPERSET_RELEASE_REVISION='${SUPERSET_RELEASE_REVISION}'
-SUPERSET_SECRET_ID='publicaffairs-superset-prod'
+SUPERSET_RUNTIME_SECRETS_PARAMETER_NAME='/production/public-affairs/superset-runtime-secrets'
 SUPERSET_RELEASES_DIRECTORY='/opt/public-affairs/superset/releases'
 SUPERSET_CURRENT_RELEASE_FILE='/opt/public-affairs/superset/current-release-revision'
 SUPERSET_PREVIOUS_RELEASE_FILE='/opt/public-affairs/superset/previous-release-revision'
@@ -222,6 +222,9 @@ image_references=(
 )
 old_image_ids=()
 candidate_image_ids=()
+old_image_ids_captured=false
+candidate_image_ids_captured=false
+candidate_init_started=false
 
 capture_image_ids() {
   local target_array_name=\$1
@@ -279,14 +282,28 @@ write_environment_file() {
   local postgres_password
   local superset_secret_key
 
-  secret_blob=\$(aws secretsmanager get-secret-value \
-    --secret-id "\$SUPERSET_SECRET_ID" \
-    --query SecretString \
+  if ! secret_blob=\$(aws ssm get-parameter \
+    --name "\$SUPERSET_RUNTIME_SECRETS_PARAMETER_NAME" \
+    --with-decryption \
+    --query 'Parameter.Value' \
     --output text \
-    --region "\$AWS_REGION")
-  database_password=\$(jq -er '.DATABASE_PASSWORD' <<< "\$secret_blob")
-  postgres_password=\$(jq -er '.POSTGRES_PASSWORD' <<< "\$secret_blob")
-  superset_secret_key=\$(jq -er '.SUPERSET_SECRET_KEY' <<< "\$secret_blob")
+    --region "\$AWS_REGION"); then
+    echo "ERROR: Could not read Superset runtime parameter \$SUPERSET_RUNTIME_SECRETS_PARAMETER_NAME" >&2
+    return 1
+  fi
+
+  if ! database_password=\$(jq -er '.DATABASE_PASSWORD | strings | select(length > 0)' <<< "\$secret_blob"); then
+    echo 'ERROR: Superset runtime secret is missing DATABASE_PASSWORD' >&2
+    return 1
+  fi
+  if ! postgres_password=\$(jq -er '.POSTGRES_PASSWORD | strings | select(length > 0)' <<< "\$secret_blob"); then
+    echo 'ERROR: Superset runtime secret is missing POSTGRES_PASSWORD' >&2
+    return 1
+  fi
+  if ! superset_secret_key=\$(jq -er '.SUPERSET_SECRET_KEY | strings | select(length > 0)' <<< "\$secret_blob"); then
+    echo 'ERROR: Superset runtime secret is missing SUPERSET_SECRET_KEY' >&2
+    return 1
+  fi
 
   umask 077
   {
@@ -359,9 +376,12 @@ fi
 
 cleanup() {
   if [ "\$deployment_succeeded" != true ]; then
+    if [ "\$old_image_ids_captured" = true ]; then
+      restore_old_image_references
+    fi
+
     if [ "\$deployment_started" = true ]; then
       echo 'Restoring the previous Superset service containers'
-      restore_old_image_references
 
       if [ -n "\$active_release_directory" ]; then
         compose_for_release "\$active_release_directory" \
@@ -379,9 +399,12 @@ cleanup() {
         echo 'CRITICAL: Could not reconnect the restored Superset container to Caddy' >&2
     fi
 
-    docker rm -f superset_init >/dev/null 2>&1 || true
-    restore_old_image_references
-    remove_unused_dangling_images "\${candidate_image_ids[@]}"
+    if [ "\$candidate_init_started" = true ]; then
+      docker rm -f superset_init >/dev/null 2>&1 || true
+    fi
+    if [ "\$candidate_image_ids_captured" = true ]; then
+      remove_unused_dangling_images "\${candidate_image_ids[@]}"
+    fi
 
     if [ "\$release_directory" != "\$active_release_directory" ] && \
       [ "\$release_directory" != "\$SUPERSET_RELEASES_DIRECTORY/\$previous_revision" ]; then
@@ -414,25 +437,29 @@ tar -xzf "\$work_directory/superset-source.tar.gz" \
 [ -f "\$staged_release_directory/yn-scripts/docker-compose-non-dev.override.yml" ]
 [ -f "\$staged_release_directory/yn-scripts/superset_config.py" ]
 
+cp "\$staged_release_directory/yn-scripts/superset_config.py" \
+  "\$staged_release_directory/docker/superset_config.py"
+write_environment_file "\$staged_release_directory"
+compose_for_release "\$staged_release_directory" config -q
+
 rm -rf -- "\$release_directory"
 mv "\$staged_release_directory" "\$release_directory"
-cp "\$release_directory/yn-scripts/superset_config.py" \
-  "\$release_directory/docker/superset_config.py"
-write_environment_file "\$release_directory"
-compose_for_release "\$release_directory" config -q
 
 capture_image_ids old_image_ids
+old_image_ids_captured=true
 compose_for_release "\$release_directory" build \
   superset superset-init superset-worker superset-worker-beat
 capture_image_ids candidate_image_ids
+candidate_image_ids_captured=true
 
+candidate_init_started=true
 compose_for_release "\$release_directory" \
   up --no-deps --force-recreate -d superset-init
 wait_for_init
 
+deployment_started=true
 compose_for_release "\$release_directory" \
   up --no-deps --force-recreate -d superset superset-worker superset-worker-beat
-deployment_started=true
 ensure_superset_network
 wait_for_superset
 
