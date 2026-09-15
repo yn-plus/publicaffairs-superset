@@ -40,6 +40,7 @@ run_ssm_command() {
   local aws_region=$1
   local comment=$2
   local remote_command=$3
+  local bash_remote_command
   local command_parameters
   local command_id
   local elapsed=0
@@ -47,8 +48,15 @@ run_ssm_command() {
   local status
   local status_details
 
+  # AWS-RunShellScript does not guarantee Bash as its interpreter. Keep the
+  # deployment body inside an explicitly invoked Bash process because it uses
+  # Bash features such as arrays, [[ ... ]], and set -o pipefail.
+  bash_remote_command=$(printf \
+    "/bin/bash -s -- <<'PUBLIC_AFFAIRS_SUPERSET_REMOTE_SCRIPT'\\n%s\\nPUBLIC_AFFAIRS_SUPERSET_REMOTE_SCRIPT\\n" \
+    "$remote_command")
+
   command_parameters=$(jq -n \
-    --arg command "$remote_command" \
+    --arg command "$bash_remote_command" \
     --arg timeout "$SSM_COMMAND_TIMEOUT_SECONDS" \
     '{commands: [$command], executionTimeout: [$timeout]}')
 
