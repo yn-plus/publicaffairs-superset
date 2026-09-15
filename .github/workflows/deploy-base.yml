@@ -165,7 +165,13 @@ jobs:
         run: |
           set -euo pipefail
           git archive --format=tar.gz --prefix=superset/ HEAD > superset-source.tar.gz
-          tar -tzf superset-source.tar.gz | grep -qx 'superset/Dockerfile'
+          listing_file=$(mktemp)
+          tar -tzf superset-source.tar.gz > "$listing_file"
+          if ! grep -qx 'superset/Dockerfile' "$listing_file"; then
+            rm -f "$listing_file"
+            exit 1
+          fi
+          rm -f "$listing_file"
           echo "SUPERSET_ARTIFACT_SHA256=$(sha256sum superset-source.tar.gz | cut -d ' ' -f 1)" >> "$GITHUB_ENV"
 
       - name: Upload immutable Superset source release
