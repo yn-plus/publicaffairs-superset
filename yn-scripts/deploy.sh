@@ -149,22 +149,30 @@ wait_for_superset() {
 
 save_init_failure_diagnostics() {
   local diagnostics_file="/opt/public-affairs/superset/failed-init-\$SUPERSET_RELEASE_REVISION.log"
-  local compose_output_file=\$1
+  local init_state
+  local init_command
+  local init_mounts
+  local init_logs
 
   umask 077
   mkdir -p /opt/public-affairs/superset
+  init_state=\$(docker inspect --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} OOMKilled={{.State.OOMKilled}} Error={{.State.Error}} StartedAt={{.State.StartedAt}} FinishedAt={{.State.FinishedAt}}' superset_init 2>&1 || true)
+  init_command=\$(docker inspect --format 'Path={{.Path}} Args={{json .Args}}' superset_init 2>&1 || true)
+  init_mounts=\$(docker inspect --format '{{range .Mounts}}Source={{.Source}} Destination={{.Destination}} Type={{.Type}} RW={{.RW}}{{"\\n"}}{{end}}' superset_init 2>&1 || true)
+  init_logs=\$(docker logs --tail 200 superset_init 2>&1 || true)
   {
     printf '%s\n' '--- compose output ---'
-    cat "\$compose_output_file" || true
+    printf '%s\n' "\$init_compose_output"
     printf '%s\n' '--- container state ---'
-    docker inspect --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} OOMKilled={{.State.OOMKilled}} Error={{.State.Error}} StartedAt={{.State.StartedAt}} FinishedAt={{.State.FinishedAt}}' superset_init || true
+    printf '%s\n' "\$init_state"
     printf '%s\n' '--- command ---'
-    docker inspect --format 'Path={{.Path}} Args={{json .Args}}' superset_init || true
+    printf '%s\n' "\$init_command"
     printf '%s\n' '--- mounts ---'
-    docker inspect --format '{{range .Mounts}}Source={{.Source}} Destination={{.Destination}} Type={{.Type}} RW={{.RW}}{{"\\n"}}{{end}}' superset_init || true
+    printf '%s\n' "\$init_mounts"
     printf '%s\n' '--- container logs ---'
-    docker logs --tail 200 superset_init || true
+    printf '%s\n' "\$init_logs"
   } > "\$diagnostics_file" 2>&1
+  unset init_state init_command init_mounts init_logs
   echo "ERROR: Superset initialization failed; inspect \$diagnostics_file on the EC2" >&2
 }
 
@@ -337,7 +345,7 @@ mkdir -p "\$SUPERSET_RELEASES_DIRECTORY"
 work_directory=\$(mktemp -d "\$SUPERSET_RELEASES_DIRECTORY/.staging.XXXXXX")
 release_directory="\$SUPERSET_RELEASES_DIRECTORY/\$SUPERSET_RELEASE_REVISION"
 staged_release_directory="\$work_directory/release"
-init_compose_output_file="\$work_directory/superset-init-compose.log"
+init_compose_output=''
 active_revision=''
 previous_revision=''
 active_release_directory=''
@@ -445,12 +453,13 @@ capture_image_ids candidate_image_ids
 candidate_image_ids_captured=true
 
 candidate_init_started=true
-if ! compose_for_release "\$release_directory" \
+if ! init_compose_output=\$(compose_for_release "\$release_directory" \
   up --no-color --no-deps --force-recreate --abort-on-container-exit \
-  --exit-code-from superset-init superset-init > "\$init_compose_output_file" 2>&1; then
-  save_init_failure_diagnostics "\$init_compose_output_file"
+  --exit-code-from superset-init superset-init 2>&1); then
+  save_init_failure_diagnostics
   exit 1
 fi
+unset init_compose_output
 docker rm -f superset_init >/dev/null 2>&1 || true
 candidate_init_started=false
 
