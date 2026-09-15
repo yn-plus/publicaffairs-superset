@@ -29,13 +29,19 @@ under the License.
 the checked-out `publicaffairs-4-1-1` revision as a versioned S3 release and
 deploys it to the production Public Affairs EC2 through GitHub OIDC and SSM.
 
-The EC2 reads its Superset configuration directly from Secrets Manager. The
-workflow never transfers secrets, never clones the repository through SSH on
-the host, and never runs global Docker prune commands. PostgreSQL and Redis
-containers and their volumes are preserved during a Superset deployment.
+The EC2 reads its Superset runtime secrets from an AWS Systems Manager Parameter
+Store SecureString. The workflow never transfers secrets, never clones the
+repository through SSH on the host, and never runs global Docker prune commands.
+PostgreSQL and Redis containers and their volumes are preserved during a Superset
+deployment.
 The initialization step applies Superset database migrations before replacing
 the application containers; container rollback cannot reverse a migration, so
 version upgrades require the usual database-backup and migration review.
+
+The frozen Superset 4.1.1 fork keeps its Node 18 frontend toolchain. Its
+official `node:18-bookworm-slim` build base matches the Debian release already
+used by `PY_VER`; this is a build-environment compatibility fix only, not a
+Superset or Node major-version upgrade.
 
 Superset has no staging deployment workflow. Its intended production URL is
 `https://superset.publicaffairs.ulyses.ai`.

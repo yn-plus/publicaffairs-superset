@@ -22,7 +22,9 @@ ARG PY_VER=3.10-slim-bookworm
 
 # if BUILDPLATFORM is null, set it to 'amd64' (or leave as is otherwise).
 ARG BUILDPLATFORM=${BUILDPLATFORM:-amd64}
-FROM --platform=${BUILDPLATFORM} node:18-bullseye-slim AS superset-node
+# Preserve the Node 18 toolchain expected by Superset 4.1.1 while using the
+# supported Debian release already used by the Python runtime below.
+FROM --platform=${BUILDPLATFORM} node:18-bookworm-slim AS superset-node
 
 ARG NPM_BUILD_CMD="build"
 
