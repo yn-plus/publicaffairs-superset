@@ -147,37 +147,15 @@ wait_for_superset() {
   return 1
 }
 
-wait_for_init() {
-  local attempts=0
-  local state
-  local exit_code
-
-  while [ "\$attempts" -lt 150 ]; do
-    state=\$(docker inspect --format '{{.State.Status}}' superset_init 2>/dev/null || true)
-    if [ "\$state" = exited ]; then
-      exit_code=\$(docker inspect --format '{{.State.ExitCode}}' superset_init)
-      [ "\$exit_code" = 0 ]
-      return
-    fi
-
-    if [ "\$state" != running ] && [ "\$state" != created ] && \
-      [ "\$state" != restarting ]; then
-      return 1
-    fi
-
-    attempts=\$((attempts + 1))
-    sleep 2
-  done
-
-  return 1
-}
-
 save_init_failure_diagnostics() {
   local diagnostics_file="/opt/public-affairs/superset/failed-init-\$SUPERSET_RELEASE_REVISION.log"
+  local compose_output_file=\$1
 
   umask 077
   mkdir -p /opt/public-affairs/superset
   {
+    printf '%s\n' '--- compose output ---'
+    cat "\$compose_output_file" || true
     printf '%s\n' '--- container state ---'
     docker inspect --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} OOMKilled={{.State.OOMKilled}} Error={{.State.Error}} StartedAt={{.State.StartedAt}} FinishedAt={{.State.FinishedAt}}' superset_init || true
     printf '%s\n' '--- command ---'
@@ -359,6 +337,7 @@ mkdir -p "\$SUPERSET_RELEASES_DIRECTORY"
 work_directory=\$(mktemp -d "\$SUPERSET_RELEASES_DIRECTORY/.staging.XXXXXX")
 release_directory="\$SUPERSET_RELEASES_DIRECTORY/\$SUPERSET_RELEASE_REVISION"
 staged_release_directory="\$work_directory/release"
+init_compose_output_file="\$work_directory/superset-init-compose.log"
 active_revision=''
 previous_revision=''
 active_release_directory=''
@@ -466,12 +445,14 @@ capture_image_ids candidate_image_ids
 candidate_image_ids_captured=true
 
 candidate_init_started=true
-compose_for_release "\$release_directory" \
-  up --no-deps --force-recreate -d superset-init
-if ! wait_for_init; then
-  save_init_failure_diagnostics
+if ! compose_for_release "\$release_directory" \
+  up --no-color --no-deps --force-recreate --abort-on-container-exit \
+  --exit-code-from superset-init superset-init > "\$init_compose_output_file" 2>&1; then
+  save_init_failure_diagnostics "\$init_compose_output_file"
   exit 1
 fi
+docker rm -f superset_init >/dev/null 2>&1 || true
+candidate_init_started=false
 
 deployment_started=true
 compose_for_release "\$release_directory" \
