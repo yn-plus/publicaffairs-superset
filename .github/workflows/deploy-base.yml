@@ -1,4 +1,4 @@
-name: Deploy Base
+name: Deploy Superset
 
 on:
   workflow_call:
@@ -10,9 +10,15 @@ on:
 env:
   AWS_REGION: eu-west-1
 
+concurrency:
+  group: deploy-superset-${{ inputs.environment }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
 
     permissions:
       id-token: write
@@ -24,12 +30,173 @@ jobs:
         with:
           ref: publicaffairs-4-1-1
 
+      - name: Resolve production deployment settings
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          case '${{ inputs.environment }}' in
+            prod)
+              echo 'INFRASTRUCTURE_ENVIRONMENT=production' >> "$GITHUB_ENV"
+              echo 'DEPLOYMENT_ARTIFACT_BUCKET=ulyses-publicaffairs-artifacts-production' >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo 'Superset is deployed only in the prod GitHub environment' >&2
+              exit 1
+              ;;
+          esac
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: eu-west-1
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Deploy to EC2
-        run:
-          ./yn-scripts/deploy.sh ${{ inputs.environment }}
+      - name: Prepare immutable Superset source release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          source_commit=$(git rev-parse HEAD)
+          [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]] || {
+            echo 'Could not determine the checked-out Superset commit' >&2
+            exit 1
+          }
+
+          release_prefix="releases/superset/${source_commit}"
+          artifact_key="${release_prefix}/superset-source.tar.gz"
+          manifest_key="${release_prefix}/superset-release.json"
+          manifest_file=$(mktemp)
+          artifact_file=$(mktemp)
+          release_ready=false
+          artifact_exists=false
+          release_keys=$(aws s3api list-objects-v2 \
+            --bucket "$DEPLOYMENT_ARTIFACT_BUCKET" \
+            --prefix "${release_prefix}/" \
+            --query 'Contents[].Key' \
+            --output text)
+
+          release_object_exists() {
+            printf '%s\n' "$release_keys" | tr '\t' '\n' | grep -Fxq "$1"
+          }
+
+          release_object_is_available() {
+            local object_key error_file
+
+            object_key=$1
+            error_file=$(mktemp)
+            if aws s3api head-object \
+              --bucket "$DEPLOYMENT_ARTIFACT_BUCKET" \
+              --key "$object_key" >/dev/null 2>"$error_file"; then
+              rm -f "$error_file"
+              return 0
+            fi
+
+            if grep -Fq '(404)' "$error_file"; then
+              rm -f "$error_file"
+              return 1
+            fi
+
+            cat "$error_file" >&2
+            rm -f "$error_file"
+            exit 1
+          }
+
+          validate_artifact() {
+            local listing_file
+
+            listing_file=$(mktemp)
+            tar -tzf "$1" > "$listing_file"
+            if ! grep -qx 'superset/Dockerfile' "$listing_file" || \
+              ! grep -qx 'superset/docker-compose-non-dev.yml' "$listing_file" || \
+              ! grep -qx 'superset/yn-scripts/deploy.sh' "$listing_file" || \
+              ! grep -qx 'superset/yn-scripts/superset_config.py' "$listing_file"; then
+              rm -f "$listing_file"
+              return 1
+            fi
+            rm -f "$listing_file"
+          }
+
+          if release_object_exists "$manifest_key"; then
+            aws s3 cp "s3://${DEPLOYMENT_ARTIFACT_BUCKET}/${manifest_key}" "$manifest_file" \
+              --only-show-errors
+            manifest_revision=$(jq -er '.revision' "$manifest_file")
+            manifest_artifact_key=$(jq -er '.artifact.key' "$manifest_file")
+            manifest_artifact_sha256=$(jq -er '.artifact.sha256' "$manifest_file")
+
+            [[ "$manifest_revision" = "$source_commit" ]] || {
+              echo 'Release manifest revision does not match this Superset commit' >&2
+              exit 1
+            }
+            [[ "$manifest_artifact_key" = "$artifact_key" ]] || {
+              echo 'Release manifest contains an unexpected Superset artifact key' >&2
+              exit 1
+            }
+            [[ "$manifest_artifact_sha256" =~ ^[0-9a-f]{64}$ ]] || {
+              echo 'Release manifest contains an invalid Superset artifact checksum' >&2
+              exit 1
+            }
+
+            if release_object_is_available "$manifest_artifact_key"; then
+              artifact_sha256="$manifest_artifact_sha256"
+              release_ready=true
+            else
+              echo 'Superset release artifact has expired; rebuilding the release'
+            fi
+          elif release_object_exists "$artifact_key"; then
+            aws s3 cp "s3://${DEPLOYMENT_ARTIFACT_BUCKET}/${artifact_key}" "$artifact_file" \
+              --only-show-errors
+            validate_artifact "$artifact_file"
+            artifact_sha256=$(sha256sum "$artifact_file" | cut -d ' ' -f 1)
+            artifact_exists=true
+          fi
+
+          {
+            echo "SUPERSET_RELEASE_REVISION=$source_commit"
+            echo "SUPERSET_ARTIFACT_KEY=$artifact_key"
+            echo "SUPERSET_ARTIFACT_SHA256=${artifact_sha256:-}"
+            echo "SUPERSET_RELEASE_READY=$release_ready"
+            echo "SUPERSET_ARTIFACT_EXISTS=$artifact_exists"
+          } >> "$GITHUB_ENV"
+
+      - name: Package Superset source release
+        if: env.SUPERSET_RELEASE_READY != 'true' && env.SUPERSET_ARTIFACT_EXISTS != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git archive --format=tar.gz --prefix=superset/ HEAD > superset-source.tar.gz
+          tar -tzf superset-source.tar.gz | grep -qx 'superset/Dockerfile'
+          echo "SUPERSET_ARTIFACT_SHA256=$(sha256sum superset-source.tar.gz | cut -d ' ' -f 1)" >> "$GITHUB_ENV"
+
+      - name: Upload immutable Superset source release
+        if: env.SUPERSET_RELEASE_READY != 'true' && env.SUPERSET_ARTIFACT_EXISTS != 'true'
+        run: |
+          aws s3 cp superset-source.tar.gz "s3://${DEPLOYMENT_ARTIFACT_BUCKET}/${SUPERSET_ARTIFACT_KEY}" \
+            --only-show-errors
+
+      - name: Publish immutable Superset release manifest
+        if: env.SUPERSET_RELEASE_READY != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          manifest_file=$(mktemp)
+          jq -n \
+            --arg revision "$SUPERSET_RELEASE_REVISION" \
+            --arg source_commit "$SUPERSET_RELEASE_REVISION" \
+            --arg artifact_key "$SUPERSET_ARTIFACT_KEY" \
+            --arg artifact_sha256 "$SUPERSET_ARTIFACT_SHA256" \
+            '{revision: $revision, source_commit: $source_commit, artifact: {key: $artifact_key, sha256: $artifact_sha256}}' \
+            > "$manifest_file"
+          aws s3 cp "$manifest_file" "s3://${DEPLOYMENT_ARTIFACT_BUCKET}/releases/superset/${SUPERSET_RELEASE_REVISION}/superset-release.json" \
+            --only-show-errors
+
+      - name: Deploy with AWS Systems Manager
+        run: |
+          ./yn-scripts/deploy.sh \
+            "$AWS_REGION" \
+            "$INFRASTRUCTURE_ENVIRONMENT" \
+            "$DEPLOYMENT_ARTIFACT_BUCKET" \
+            "$SUPERSET_ARTIFACT_KEY" \
+            "$SUPERSET_ARTIFACT_SHA256" \
+            "$SUPERSET_RELEASE_REVISION"

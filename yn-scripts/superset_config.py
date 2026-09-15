@@ -19,6 +19,17 @@
 
 APP_ICON = "/static/assets/images/logo-yn-big.png"
 
+# Superset is exposed exclusively through Caddy on the Public Affairs domains.
+PUBLIC_AFFAIRS_ORIGINS = [
+    "https://publicaffairs-staging.ulyses.ai",
+    "https://publicaffairs.ulyses.ai",
+]
+
+# Caddy terminates TLS and forwards the original request scheme and host.
+ENABLE_PROXY_FIX = True
+PROXY_FIX_CONFIG = {"x_for": 1, "x_proto": 1, "x_host": 1, "x_port": 1, "x_prefix": 1}
+SESSION_COOKIE_SECURE = True
+
 TALISMAN_CONFIG = {
     "content_security_policy": {
         "base-uri": ["'self'"],
@@ -30,10 +41,7 @@ TALISMAN_CONFIG = {
             "https://apachesuperset.gateway.scarf.sh",
             "https://static.scarf.sh/",
             # "https://avatars.slack-edge.com", # Uncomment when SLACK_ENABLE_AVATARS is True
-            "https://publicaffairs-staging.yn-es.com:8088/",
-            "https://publicaffairs.yn-es.com:8088/",
-            "https://publicaffairs-staging.yn-es.com/",
-            "https://publicaffairs.yn-es.com/",
+            *PUBLIC_AFFAIRS_ORIGINS,
             # "https://cdn.brandfolder.io", # Uncomment when SLACK_ENABLE_AVATARS is True  # noqa: E501
             "ows.terrestris.de",
         ],
@@ -42,7 +50,7 @@ TALISMAN_CONFIG = {
             "'self'",
             "https://api.mapbox.com",
             "https://events.mapbox.com",
-            "https://publicaffairs.yn-es.com"
+            *PUBLIC_AFFAIRS_ORIGINS,
         ],
         "object-src": "'none'",
         "style-src": [
@@ -52,8 +60,8 @@ TALISMAN_CONFIG = {
         "script-src": ["'self'", "'strict-dynamic'"],
     },
     "content_security_policy_nonce_in": ["script-src"],
-    "force_https": False,
-    "session_cookie_secure": False,
+    "force_https": True,
+    "session_cookie_secure": True,
 }
 # React requires `eval` to work correctly in dev mode
 TALISMAN_DEV_CONFIG = {
@@ -67,10 +75,7 @@ TALISMAN_DEV_CONFIG = {
             "https://apachesuperset.gateway.scarf.sh",
             "https://static.scarf.sh/",
             "https://avatars.slack-edge.com",
-            "https://publicaffairs-staging.yn-es.com:8088/",
-            "https://publicaffairs.yn-es.com:8088/",
-            "https://publicaffairs-staging.yn-es.com/",
-            "https://publicaffairs.yn-es.com/",
+            *PUBLIC_AFFAIRS_ORIGINS,
             "https://cdn.brandfolder.io",
             "ows.terrestris.de",
         ],
@@ -79,6 +84,7 @@ TALISMAN_DEV_CONFIG = {
             "'self'",
             "https://api.mapbox.com",
             "https://events.mapbox.com",
+            *PUBLIC_AFFAIRS_ORIGINS,
         ],
         "object-src": "'none'",
         "style-src": [
@@ -88,8 +94,8 @@ TALISMAN_DEV_CONFIG = {
         "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
     },
     "content_security_policy_nonce_in": ["script-src"],
-    "force_https": False,
-    "session_cookie_secure": False,
+    "force_https": True,
+    "session_cookie_secure": True,
 }
 
 # Custom color schemes for charts

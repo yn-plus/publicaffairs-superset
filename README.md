@@ -23,6 +23,23 @@ under the License.
 
 **Never deploy marter branch, its the provider branch, our branch is "publicaffairs-4-1-1".**
 
+## Public Affairs production deployment
+
+`deploy-superset-prod.yml` is the only supported deployment workflow. It packages
+the checked-out `publicaffairs-4-1-1` revision as a versioned S3 release and
+deploys it to the production Public Affairs EC2 through GitHub OIDC and SSM.
+
+The EC2 reads its Superset configuration directly from Secrets Manager. The
+workflow never transfers secrets, never clones the repository through SSH on
+the host, and never runs global Docker prune commands. PostgreSQL and Redis
+containers and their volumes are preserved during a Superset deployment.
+The initialization step applies Superset database migrations before replacing
+the application containers; container rollback cannot reverse a migration, so
+version upgrades require the usual database-backup and migration review.
+
+Superset has no staging deployment workflow. Its intended production URL is
+`https://superset.publicaffairs.ulyses.ai`.
+
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/apache/superset?sort=semver)](https://github.com/apache/superset/tree/latest)
