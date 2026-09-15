@@ -126,7 +126,7 @@ ARTIFACT_KEY='${ARTIFACT_KEY}'
 ARTIFACT_SHA256='${ARTIFACT_SHA256}'
 SUPERSET_RELEASE_REVISION='${SUPERSET_RELEASE_REVISION}'
 SUPERSET_RUNTIME_SECRETS_PARAMETER_NAME='/production/public-affairs/superset-runtime-secrets'
-SUPERSET_RELEASES_DIRECTORY='/opt/public-affairs/superset/releases'
+SUPERSET_RELEASES_DIRECTORY='/home/ubuntu/superset/releases'
 SUPERSET_CURRENT_RELEASE_FILE='/opt/public-affairs/superset/current-release-revision'
 SUPERSET_PREVIOUS_RELEASE_FILE='/opt/public-affairs/superset/previous-release-revision'
 LEGACY_SUPERSET_DIRECTORY='/home/ubuntu/superset'
@@ -344,7 +344,7 @@ for required_container in superset_db superset_cache; do
 done
 
 mkdir -p "\$SUPERSET_RELEASES_DIRECTORY"
-work_directory=\$(mktemp -d)
+work_directory=\$(mktemp -d "\$SUPERSET_RELEASES_DIRECTORY/.staging.XXXXXX")
 release_directory="\$SUPERSET_RELEASES_DIRECTORY/\$SUPERSET_RELEASE_REVISION"
 staged_release_directory="\$work_directory/release"
 active_revision=''
