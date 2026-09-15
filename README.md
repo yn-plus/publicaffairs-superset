@@ -43,6 +43,10 @@ official `node:18-bookworm-slim` build base matches the Debian release already
 used by `PY_VER`; this is a build-environment compatibility fix only, not a
 Superset or Node major-version upgrade.
 
+The image pins `setuptools` to `80.9.0`, the version running in the known-good
+production image. Superset 4.1.1 imports `pkg_resources`, which newer
+`setuptools` releases no longer provide.
+
 Superset has no staging deployment workflow. Its intended production URL is
 `https://superset.publicaffairs.ulyses.ai`.
 

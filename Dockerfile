@@ -91,10 +91,11 @@ COPY --chown=superset:superset pyproject.toml setup.py MANIFEST.in README.md ./
 # setup.py uses the version information in package.json
 COPY --chown=superset:superset superset-frontend/package.json superset-frontend/
 COPY --chown=superset:superset requirements/base.txt requirements/
+# Superset 4.1.1 imports pkg_resources, removed in newer setuptools releases.
 RUN --mount=type=cache,target=/root/.cache/pip \
     apt-get update -qq && apt-get install -yqq --no-install-recommends \
       build-essential \
-    && pip install --upgrade setuptools pip \
+    && pip install --upgrade "setuptools==80.9.0" pip \
     && pip install -r requirements/base.txt \
     && apt-get autoremove -yqq --purge build-essential \
     && rm -rf /var/lib/apt/lists/*
