@@ -172,6 +172,15 @@ wait_for_init() {
   return 1
 }
 
+save_init_failure_log() {
+  local log_file="/opt/public-affairs/superset/failed-init-\$SUPERSET_RELEASE_REVISION.log"
+
+  umask 077
+  mkdir -p /opt/public-affairs/superset
+  docker logs --tail 200 superset_init > "\$log_file" 2>&1 || true
+  echo "ERROR: Superset initialization failed; inspect \$log_file on the EC2" >&2
+}
+
 container_is_running() {
   [ "\$(docker inspect --format '{{.State.Running}}' "\$1" 2>/dev/null || true)" = true ]
 }
@@ -456,7 +465,10 @@ candidate_image_ids_captured=true
 candidate_init_started=true
 compose_for_release "\$release_directory" \
   up --no-deps --force-recreate -d superset-init
-wait_for_init
+if ! wait_for_init; then
+  save_init_failure_log
+  exit 1
+fi
 
 deployment_started=true
 compose_for_release "\$release_directory" \
