@@ -172,13 +172,22 @@ wait_for_init() {
   return 1
 }
 
-save_init_failure_log() {
-  local log_file="/opt/public-affairs/superset/failed-init-\$SUPERSET_RELEASE_REVISION.log"
+save_init_failure_diagnostics() {
+  local diagnostics_file="/opt/public-affairs/superset/failed-init-\$SUPERSET_RELEASE_REVISION.log"
 
   umask 077
   mkdir -p /opt/public-affairs/superset
-  docker logs --tail 200 superset_init > "\$log_file" 2>&1 || true
-  echo "ERROR: Superset initialization failed; inspect \$log_file on the EC2" >&2
+  {
+    printf '%s\n' '--- container state ---'
+    docker inspect --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} OOMKilled={{.State.OOMKilled}} Error={{.State.Error}} StartedAt={{.State.StartedAt}} FinishedAt={{.State.FinishedAt}}' superset_init || true
+    printf '%s\n' '--- command ---'
+    docker inspect --format 'Path={{.Path}} Args={{json .Args}}' superset_init || true
+    printf '%s\n' '--- mounts ---'
+    docker inspect --format '{{range .Mounts}}Source={{.Source}} Destination={{.Destination}} Type={{.Type}} RW={{.RW}}{{"\\n"}}{{end}}' superset_init || true
+    printf '%s\n' '--- container logs ---'
+    docker logs --tail 200 superset_init || true
+  } > "\$diagnostics_file" 2>&1
+  echo "ERROR: Superset initialization failed; inspect \$diagnostics_file on the EC2" >&2
 }
 
 container_is_running() {
@@ -217,10 +226,6 @@ image_is_used_by_container() {
   done
 
   return 1
-}
-
-image_is_dangling() {
-  docker image ls --filter dangling=true --no-trunc --format '{{.ID}}' | grep -Fqx "\$1"
 }
 
 image_references=(
@@ -266,7 +271,7 @@ restore_old_image_references() {
   done
 }
 
-remove_unused_dangling_images() {
+remove_unused_images() {
   local image_id
 
   for image_id in "\$@"; do
@@ -277,10 +282,8 @@ remove_unused_dangling_images() {
       continue
     fi
 
-    if image_is_dangling "\$image_id"; then
-      docker image rm "\$image_id" >/dev/null || \
-        echo "WARNING: Could not remove displaced Superset image \$image_id" >&2
-    fi
+    docker image rm "\$image_id" >/dev/null || \
+      echo "WARNING: Could not remove unused Superset image \$image_id" >&2
   done
 }
 
@@ -412,7 +415,7 @@ cleanup() {
       docker rm -f superset_init >/dev/null 2>&1 || true
     fi
     if [ "\$candidate_image_ids_captured" = true ]; then
-      remove_unused_dangling_images "\${candidate_image_ids[@]}"
+      remove_unused_images "\${candidate_image_ids[@]}"
     fi
 
     if [ "\$release_directory" != "\$active_release_directory" ] && \
@@ -466,7 +469,7 @@ candidate_init_started=true
 compose_for_release "\$release_directory" \
   up --no-deps --force-recreate -d superset-init
 if ! wait_for_init; then
-  save_init_failure_log
+  save_init_failure_diagnostics
   exit 1
 fi
 
@@ -488,7 +491,7 @@ fi
 printf '%s\\n' "\$SUPERSET_RELEASE_REVISION" > "\$work_directory/current-release-revision"
 mv "\$work_directory/current-release-revision" "\$SUPERSET_CURRENT_RELEASE_FILE"
 
-remove_unused_dangling_images "\${old_image_ids[@]}"
+remove_unused_images "\${old_image_ids[@]}"
 cleanup_release_directories "\$SUPERSET_RELEASE_REVISION" "\$previous_revision"
 deployment_succeeded=true
 echo 'Superset deployment completed'
